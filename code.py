@@ -1,12 +1,19 @@
 
 import json
 import os
+import asyncio
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 FILE_NAME = "users.json"
 COUNTER_FILE = "counter.json"
+
+# 🔴 حط ID القروب هنا
+GROUP_ID = -1003996815543  
+
+# 🔴 حط التوكن هنا
+TOKEN = "PUT_YOUR_TOKEN_HERE"
 
 # تحميل المستخدمين
 def load_users():
@@ -35,85 +42,101 @@ def save_counter(count):
 users = load_users()
 counter = load_counter()
 
-# القائمة الرئيسية
-def get_main_menu():
-    keyboard = [
-        ["📜 الشروط"],
-        ["🔑 الحصول على كود"],
-        ["🛒 المتجر"]
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-# start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👑 أهلاً بك في SUMO\n\nاختر من القائمة 👇",
-        reply_markup=get_main_menu()
+# ✅ قائمة
+def get_menu():
+    return ReplyKeyboardMarkup(
+        [
+            ["📜 الشروط"],
+            ["🔑 الحصول على كود"],
+            ["🛒 المتجر"]
+        ],
+        resize_keyboard=True
     )
 
-# التعامل مع الرسائل
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ✅ start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(
+        f"👋 أهلاً {user.first_name}",
+        reply_markup=get_menu()
+    )
+
+# ✅ الرسائل
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global counter
 
     text = update.message.text
-    user_id = str(update.effective_user.id)
+    user = update.effective_user
+    user_id = str(user.id)
+
+    username = f"@{user.username}" if user.username else "بدون يوزر"
 
     # 📜 الشروط
     if text == "📜 الشروط":
-        keyboard = [["⬅️ رجوع"]]
-        await update.message.reply_text("""
-📜 الشروط – سمو
+        await update.message.reply_text(
+            "📜 شروط الاستخدام\n\n✅ 4 طلبات = مجاني\n✅ مرة كل 30 يوم",
+            reply_markup=ReplyKeyboardMarkup([["⬅️ رجوع"]], resize_keyboard=True)
+        )
 
-✅ 4 طلبات = اشتراك مجاني  
-✅ مرة كل 30 يوم  
-✅ الاشتراك لمدة شهر
-""", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
-
-    # 🔑 الحصول على كود
+    # 🔑 كود
     elif text == "🔑 الحصول على كود":
 
         if user_id not in users:
             code = f"SUMO{counter}"
             users[user_id] = {"code": code}
             counter += 1
-
             save_users(users)
             save_counter(counter)
         else:
             code = users[user_id]["code"]
 
-        keyboard = [["⬅️ رجوع"]]
+        # ✅ إشعار القروب (سريع بدون تأخير)
+        asyncio.create_task(
+            context.bot.send_message(
+                chat_id=GROUP_ID,
+                text=f"""
+📥 طلب كود جديد
 
-        await update.message.reply_text(f"""
+👤 الاسم: {user.first_name}
+🆔 ID: {user_id}
+📛 Username: {username}
+
+🔑 الكود: {code}
+"""
+            )
+        )
+
+        await update.message.reply_text(
+            f"""
 🔑 كودك:
 
 {code}
 
-📢 شاركه وابدأ الآن 🔥
-""", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+📢 شاركه الآن 🔥
+""",
+            reply_markup=ReplyKeyboardMarkup([["⬅️ رجوع"]], resize_keyboard=True)
+        )
 
     # 🛒 المتجر
     elif text == "🛒 المتجر":
-        keyboard = [["⬅️ رجوع"]]
-        await update.message.reply_text("""
-🛒 متجر سمو
-
-https://sumo.twsaa.com/
-""", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        await update.message.reply_text(
+            "🛒 متجر سمو:\nhttps://sumo.twsaa.com/",
+            reply_markup=ReplyKeyboardMarkup([["⬅️ رجوع"]], resize_keyboard=True)
+        )
 
     # ⬅️ رجوع
     elif text == "⬅️ رجوع":
         await update.message.reply_text(
             "👑 القائمة الرئيسية",
-            reply_markup=get_main_menu()
+            reply_markup=get_menu()
         )
 
-# تشغيل البوت
-app = ApplicationBuilder().token("8787017989:AAEQqjUk7wximKGDVA96XvWg6sHAx6eyOy4").build()
+# ✅ تشغيل البوت
+app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
 print("✅ BOT IS RUNNING")
 
-app.run_polling()
+app.run_polling(drop_pending_updates=True)
