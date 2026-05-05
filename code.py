@@ -143,19 +143,35 @@ def run_web():
     app_flask.run(host="0.0.0.0", port=10000)
 
 # ✅ تشغيل البوت
-def run_bot():
-    import asyncio
-    asyncio.set_event_loop(asyncio.new_event_loop())
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    
+from flask import Flask
+import threading
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+# Flask
+app_flask = Flask(__name__)
 
-    print("✅ BOT IS RUNNING")
+@app_flask.route('/')
+def home():
+    return "Bot is running ✅"
 
-    app.run_polling(drop_pending_updates=True)
+def run_web():
+    app_flask.run(host="0.0.0.0", port=10000)
+
+# ✅ شغل الويب بالخلف
+threading.Thread(target=run_web).start()
+
+# ✅ شغل البوت بشكل مباشر (المهم)
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+print("✅ BOT IS RUNNING")
+
+app.run_polling(drop_pending_updates=True)
+
 
 # ✅ تشغيل الاثنين
-threading.Thread(target=run_bot).start()
+
 run_web()
