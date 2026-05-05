@@ -2,6 +2,8 @@
 import json
 import os
 import asyncio
+import threading
+from flask import Flask
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -42,7 +44,7 @@ def save_counter(count):
 users = load_users()
 counter = load_counter()
 
-# ✅ قائمة
+# ✅ القائمة
 def get_menu():
     return ReplyKeyboardMarkup(
         [
@@ -61,14 +63,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_menu()
     )
 
-# ✅ الرسائل
+# ✅ التعامل مع الرسائل
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global counter
 
     text = update.message.text
     user = update.effective_user
     user_id = str(user.id)
-
     username = f"@{user.username}" if user.username else "بدون يوزر"
 
     # 📜 الشروط
@@ -90,7 +91,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             code = users[user_id]["code"]
 
-        # ✅ إشعار القروب (سريع بدون تأخير)
+        # ✅ إرسال للقروب بدون تأخير
         asyncio.create_task(
             context.bot.send_message(
                 chat_id=GROUP_ID,
@@ -131,17 +132,30 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=get_menu()
         )
 
+# ✅ Flask (عشان Render)
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def home():
+    return "Bot is running ✅"
+
+def run_web():
+    app_flask.run(host="0.0.0.0", port=10000)
+
 # ✅ تشغيل البوت
+def run_bot():
+    import asyncio
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
-import asyncio
+    app = ApplicationBuilder().token(TOKEN).build()
 
-asyncio.set_event_loop(asyncio.new_event_loop())
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-app = ApplicationBuilder().token(TOKEN).build()
+    print("✅ BOT IS RUNNING")
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+    app.run_polling(drop_pending_updates=True)
 
-print("✅ BOT IS RUNNING")
-
-app.run_polling(drop_pending_updates=True)
+# ✅ تشغيل الاثنين
+threading.Thread(target=run_bot).start()
+run_web()
