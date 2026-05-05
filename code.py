@@ -13,7 +13,7 @@ COUNTER_FILE = "counter.json"
 GROUP_ID = -1003996815543  
 
 # 🔴 حط التوكن هنا
-TOKEN = "PUT_YOUR_TOKEN_HERE"
+TOKEN = "8787017989:AAEQqjUk7wximKGDVA96XvWg6sHAx6eyOy4"
 
 # تحميل المستخدمين
 def load_users():
