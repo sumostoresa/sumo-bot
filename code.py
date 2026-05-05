@@ -132,6 +132,11 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # ✅ تشغيل البوت
+
+import asyncio
+
+asyncio.set_event_loop(asyncio.new_event_loop())
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
